@@ -15,7 +15,14 @@ APP_SRC_FILES = $(APP_NAME).c
 #IoT client directory
 IOT_CLIENT_DIR = ../../..
 
-PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux/mbedtls
+USE_WOLFSSL ?= 1
+
+ifeq ($(USE_WOLFSSL), 1))
+	PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux/wolfssl
+else
+	PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux/mbedtls
+endif
+
 PLATFORM_COMMON_DIR = $(IOT_CLIENT_DIR)/platform/linux/common
 
 IOT_INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/include
@@ -28,13 +35,28 @@ IOT_SRC_FILES += $(shell find $(IOT_CLIENT_DIR)/external_libs/jsmn -name '*.c')
 IOT_SRC_FILES += $(shell find $(PLATFORM_DIR)/ -name '*.c')
 IOT_SRC_FILES += $(shell find $(PLATFORM_COMMON_DIR)/ -name '*.c')
 
-#TLS - mbedtls
+#TLS
+
 MBEDTLS_DIR = $(IOT_CLIENT_DIR)/external_libs/mbedTLS
-TLS_LIB_DIR = $(MBEDTLS_DIR)/library
-TLS_INCLUDE_DIR = -I $(MBEDTLS_DIR)/include
-EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
-LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
-LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a -lpthread
+WOLFSSL_DIR = $(IOT_CLIENT_DIR)/external_libs/wolfssl
+
+ifeq ($(USE_WOLFSSL), 1)
+	TLSDIR = $(WOLFSSL_DIR)
+	COMPILER_FLAGS += -DUSE_WOLFSSL
+	TLS_LIB_DIR = $(WOLFSSL_DIR)/src/.libs
+	EXTERNAL_LIBS += -L$(WOLFSSL_DIR)
+	LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
+	LD_FLAG += -ldl $(TLS_LIB_DIR)/libwolfssl.so -lpthread
+else
+	TLSDIR = $(MBEDTLS_DIR)
+	COMPILER_FLAGS += -DUSE_MBEDTLS
+	TLS_LIB_DIR = $(MBEDTLS_DIR)/library
+	TLS_INCLUDE_DIR = -I $(MBEDTLS_DIR)/include
+	EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
+	LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
+	LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a -lpthread
+endif
+
 
 #Aggregate all include and src directories
 INCLUDE_ALL_DIRS += $(IOT_INCLUDE_DIRS)
@@ -54,7 +76,7 @@ COMPILER_FLAGS += $(LOG_FLAGS)
 #If the processor is big endian uncomment the compiler flag
 #COMPILER_FLAGS += -DREVERSED
 
-MBED_TLS_MAKE_CMD = $(MAKE) -C $(MBEDTLS_DIR)
+TLS_MAKE_CMD = $(MAKE) -C $(TLS_DIR)
 
 PRE_MAKE_CMD = $(MBED_TLS_MAKE_CMD)
 MAKE_CMD = $(CC) $(SRC_FILES) $(COMPILER_FLAGS) -o $(APP_NAME) $(LD_FLAG) $(EXTERNAL_LIBS) $(INCLUDE_ALL_DIRS)

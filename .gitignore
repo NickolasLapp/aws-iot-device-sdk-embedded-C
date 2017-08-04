@@ -1,0 +1,4 @@
+external_libs/*
+certs/*
+**.swp
+tags

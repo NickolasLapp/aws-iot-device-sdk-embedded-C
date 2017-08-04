@@ -49,10 +49,18 @@ CPPUTEST_LDFLAGS += -ldl $(CPPUTEST_BUILD_LIB)/libCppUTest.a
 
 PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
 
-#MbedTLS directory
-TEMP_MBEDTLS_SRC_DIR = $(APP_DIR)/tls_mock
-TLS_LIB_DIR = $(TEMP_MBEDTLS_SRC_DIR)
-TLS_INCLUDE_DIR = -I $(TEMP_MBEDTLS_SRC_DIR)
+#TLS
+
+USE_WOLFSSL ?= 1
+
+ifeq ($(USE_WOLFSSL), 1)
+	TLS_INCLUDE_DIR = -I external_libs/wolfssl/wolfssl
+else
+	TEMP_MBEDTLS_SRC_DIR = $(APP_DIR)/tls_mock
+	TLS_LIB_DIR = $(TEMP_MBEDTLS_SRC_DIR)
+	TLS_INCLUDE_DIR = -I $(TEMP_MBEDTLS_SRC_DIR)
+endif
+
 
 # Logging level control
 LOG_FLAGS += -DENABLE_IOT_DEBUG

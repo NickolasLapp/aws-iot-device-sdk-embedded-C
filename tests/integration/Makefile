@@ -19,14 +19,32 @@ APP_INCLUDE_DIRS = -I $(APP_DIR)/include
 
 PLATFORM_DIR = $(IOT_CLIENT_DIR)/platform/linux
 
-#MbedTLS directory
-TEMP_MBEDTLS_SRC_DIR = $(IOT_CLIENT_DIR)/external_libs/mbedTLS
-TLS_LIB_DIR = $(TEMP_MBEDTLS_SRC_DIR)/library
-TLS_INCLUDE_DIR = -I $(TEMP_MBEDTLS_SRC_DIR)/include
+#TLS
 
-EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
-LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
-LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a -lpthread
+USE_WOLFSSL ?= 1
+MBEDTLS_DIR = $(IOT_CLIENT_DIR)/external_libs/mbedTLS
+WOLFSSL_DIR = $(IOT_CLIENT_DIR)/external_libs/wolfssl
+
+ifeq ($(USE_WOLFSSL), 1)
+	TLSDIR = $(WOLFSSL_DIR)
+	COMPILER_FLAGS += -DUSE_WOLFSSL
+	TLS_LIB_DIR = $(WOLFSSL_DIR)/src/.libs
+	TLS_INCLUDE_DIR = -I $(WOLFSSL_DIR) -I $(WOLFSSL_DIR)/wolfssl
+	EXTERNAL_LIBS += -L$(WOLFSSL_DIR)
+	LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
+	LD_FLAG += -ldl $(TLS_LIB_DIR)/libwolfssl.so -lpthread
+	PLATFORM_NETWORK_DIR = $(PLATFORM_DIR)/wolfssl
+else
+	TLSDIR = $(MBEDTLS_DIR)
+	COMPILER_FLAGS += -DUSE_MBEDTLS
+	TLS_LIB_DIR = $(MBEDTLS_DIR)/library
+	TLS_INCLUDE_DIR = -I $(MBEDTLS_DIR)/include
+	EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
+	LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
+	LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a -lpthread
+	PLATFORM_NETWORK_DIR = $(PLATFORM_DIR)/mbedtls
+	PRE_MAKE_CMDS += cd $(TEMP_MBEDTLS_SRC_DIR) && make
+endif
 
 # Logging level control
 #LOG_FLAGS += -DENABLE_IOT_DEBUG
@@ -39,7 +57,6 @@ COMPILER_FLAGS += $(LOG_FLAGS)
 #IoT client directory
 PLATFORM_COMMON_DIR = $(PLATFORM_DIR)/common
 PLATFORM_THREAD_DIR = $(PLATFORM_DIR)/pthread
-PLATFORM_NETWORK_DIR = $(PLATFORM_DIR)/mbedtls
 
 IOT_INCLUDE_DIRS = -I $(PLATFORM_COMMON_DIR)
 IOT_INCLUDE_DIRS += -I $(PLATFORM_THREAD_DIR)
